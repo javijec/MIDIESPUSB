@@ -30,8 +30,16 @@ bool toggleStates[4] = {false, false, false, false};
 void handleButtonEvent(uint8_t id, uint8_t eventType);
 
 void setup() {
+  Serial.begin(115200);
+  delay(500); // Wait for serial
+  Serial.println("Starting MIDI Pedalboard...");
+  
   display.begin(50);
   display.enableTextAA(false);
+  
+  // *** CRITICAL: Load configuration first ***
+  configManager.begin();
+  Serial.println("Config loaded");
   
   // Inicialización de bancos
   bankManager.begin();
@@ -40,14 +48,20 @@ void setup() {
   pedalboardUI.begin();
   pedalboardUI.updateBankLabel(bankManager.getCurrentBankName());
   
+  // Redibujar botones según configuración guardada
+  for (int i = 0; i < 4; i++) {
+    MidiButtonConfig cfg = configManager.getButtonConfig(i);
+    Serial.printf("Button %d: Type=%d, MidiType=%d, Value=%d\n", i, cfg.type, cfg.midiType, cfg.value);
+    pedalboardUI.setButtonState(i, false, cfg.type); // Draw with correct type
+  }
+  
   // Inicialización de la interfaz MIDI
   midi.begin();
   
-  // Inicialización de configuración (BLE + Preferencias)
-  configManager.begin();
-  
   // Inicialización de botones
   buttonManager.begin(handleButtonEvent);
+  
+  Serial.println("Setup complete!");
 }
 
 void loop() {

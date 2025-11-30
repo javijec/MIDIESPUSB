@@ -63,19 +63,25 @@ void ConfigManager::update() {
 void ConfigManager::loadFromPreferences() {
     preferences.begin("midi-pedal", false);
     
+    Serial.println("Loading preferences...");
+    
     // Check if initialized
     if (!preferences.getBool("init", false)) {
+        Serial.println("First boot - loading defaults");
         loadDefaults();
         preferences.putBool("init", true);
     } else {
+        Serial.println("Loading saved configs");
         // Load configs
         for (int i = 0; i < 4; i++) {
             String key = "btn" + String(i);
             if (preferences.isKey(key.c_str())) {
                 preferences.getBytes(key.c_str(), &configs[i], sizeof(MidiButtonConfig));
+                Serial.printf("Loaded Btn%d: type=%d\n", i, configs[i].type);
             } else {
                 // Fallback if key missing
                 configs[i] = {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, (uint8_t)(60 + i), 1, 1};
+                Serial.printf("Btn%d: Using fallback\n", i);
             }
         }
     }
@@ -104,6 +110,9 @@ void ConfigManager::saveButtonConfig(uint8_t index, MidiButtonConfig config) {
     String key = "btn" + String(index);
     preferences.putBytes(key.c_str(), &config, sizeof(MidiButtonConfig));
     preferences.end();
+    
+    Serial.printf("Saved Btn%d: type=%d, midiType=%d, value=%d\n", 
+                  index, config.type, config.midiType, config.value);
 }
 
 MidiButtonConfig ConfigManager::getButtonConfig(uint8_t index) {
