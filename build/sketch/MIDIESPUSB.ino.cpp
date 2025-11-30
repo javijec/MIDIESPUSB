@@ -5,6 +5,7 @@
 #include "ST7789_Graphics.h"
 #include "PedalboardUI.h"     // Incluye la UI
 #include "BankManager.h"      // Incluye el gestor de bancos
+#include "ConfigManager.h"    // Incluye el gestor de configuración
 
 // Variables para la pantalla
 unsigned long lastUpdate = 0;
@@ -27,11 +28,11 @@ const int NOTE_DURATION_MS = 200;
 // Declaración de funciones
 void handleButtonEvent(uint8_t id, uint8_t eventType);
 
-#line 28 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
+#line 29 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void setup();
-#line 47 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
+#line 50 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void loop();
-#line 28 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
+#line 29 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void setup() {
   display.begin(50);
   display.enableTextAA(false);
@@ -45,7 +46,9 @@ void setup() {
   
   // Inicialización de la interfaz MIDI
   midi.begin();
-  Serial.begin(115200);
+  
+  // Inicialización de configuración (BLE + Preferencias)
+  configManager.begin();
   
   // Inicialización de botones
   buttonManager.begin(handleButtonEvent);
@@ -93,16 +96,36 @@ void handleButtonEvent(uint8_t id, uint8_t eventType) {
 
   // Lógica de envío MIDI (solo en Press)
   if (eventType == ButtonManager::EVENT_PRESSED) {
-      MIDIAddress noteToSend = bankManager.getNoteForButton(logicalId);
+      // Obtener configuración del botón
+      MidiButtonConfig config = configManager.getButtonConfig(logicalId);
       
-      // Enviar Note On
-      midi.sendNoteOn(noteToSend, velocity);
-      activeNoteAddress = noteToSend;
-      noteOnTime = millis();
-
-      // Mostrar mensaje de estado
-      String msg = "Note Sent"; // Podríamos mejorar esto para mostrar la nota real
-      pedalboardUI.showStatusMessage(msg);
+      if (config.enabled) {
+          if (config.midiType == MIDI_TYPE_NOTE) {
+              // Note On
+              MIDIAddress noteToSend = {config.value, (Channel)(config.channel)};
+              midi.sendNoteOn(noteToSend, velocity);
+              activeNoteAddress = noteToSend;
+              noteOnTime = millis();
+              
+              String msg = "Note " + String(config.value);
+              pedalboardUI.showStatusMessage(msg);
+          } 
+          else if (config.midiType == MIDI_TYPE_CC) {
+              // Control Change
+              MIDIAddress ccToSend = {config.value, (Channel)(config.channel)};
+              midi.sendControlChange(ccToSend, 127); // Send max value
+              
+              String msg = "CC " + String(config.value);
+              pedalboardUI.showStatusMessage(msg);
+          }
+          else if (config.midiType == MIDI_TYPE_PC) {
+              // Program Change
+              midi.sendProgramChange((Channel)(config.channel), config.value);
+              
+              String msg = "PC " + String(config.value);
+              pedalboardUI.showStatusMessage(msg);
+          }
+      }
   }
 }
 
