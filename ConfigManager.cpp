@@ -1,4 +1,5 @@
 #include "ConfigManager.h"
+#include "PedalboardUI.h"
 
 ConfigManager configManager;
 
@@ -38,6 +39,10 @@ class ConfigCallbacks: public BLECharacteristicCallbacks {
                 
                 configManager.saveButtonConfig(index, newConfig);
                 Serial.printf("Updated Config for Button %d\n", index);
+                
+                // Mostrar en la pantalla
+                String msg = "Config Saved: Btn " + String(index + 1);
+                pedalboardUI.showStatusMessage(msg, CYAN);
             }
         }
     }

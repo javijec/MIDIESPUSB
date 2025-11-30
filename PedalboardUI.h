@@ -14,7 +14,7 @@ public:
     void update();
 
     // Update the visual state of a button (pressed/released)
-    void setButtonState(uint8_t index, bool pressed);
+    void setButtonState(uint8_t index, bool pressed, uint8_t buttonType = 0);
     
     // Update the displayed bank name
     void updateBankLabel(const String& bankName);
@@ -33,8 +33,11 @@ private:
     bool messageVisible = false;
     static const int MESSAGE_DURATION = 2000;
 
-    // Helper to draw a single virtual pedal
+    // Helper to draw a single virtual pedal (Momentary)
     void drawPedal(uint8_t index, bool pressed);
+    
+    // Helper to draw a toggle button (Toggle)
+    void drawToggleButton(uint8_t index, bool state);
 };
 
 extern PedalboardUI pedalboardUI;

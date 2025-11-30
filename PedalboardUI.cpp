@@ -31,9 +31,15 @@ void PedalboardUI::update() {
     }
 }
 
-void PedalboardUI::setButtonState(uint8_t index, bool pressed) {
+void PedalboardUI::setButtonState(uint8_t index, bool pressed, uint8_t buttonType) {
     if (index >= 4) return;
-    drawPedal(index, pressed);
+    
+    // Draw based on button type
+    if (buttonType == 1) { // BUTTON_TOGGLE
+        drawToggleButton(index, pressed);
+    } else { // BUTTON_MOMENTARY
+        drawPedal(index, pressed);
+    }
 }
 
 void PedalboardUI::updateBankLabel(const String& bankName) {
@@ -89,4 +95,36 @@ void PedalboardUI::drawPedal(uint8_t index, bool pressed) {
     String label = String(index + 1);
     int textY = cy + PEDAL_RADIUS + 10;
     display.drawCenteredText(textY, label, textColor, BLACK, 1);
+}
+
+void PedalboardUI::drawToggleButton(uint8_t index, bool state) {
+    // Calculate position - same as pedals but rectangular
+    const int BTN_WIDTH = 50;
+    const int BTN_HEIGHT = 50;
+    int diameter = 2 * PEDAL_RADIUS;
+    int totalWidth = (4 * diameter) + (3 * PEDAL_GAP);
+    int startX = (display.getWidth() - totalWidth) / 2;
+    
+    int x = startX + index * (diameter + PEDAL_GAP) + (PEDAL_RADIUS - BTN_WIDTH/2);
+    int y = PEDAL_Y_POS - BTN_HEIGHT/2;
+    
+    // Colors for ON/OFF states
+    uint16_t fillColor = state ? GREEN : DARKGRAY;
+    uint16_t borderColor = state ? WHITE : GRAY;
+    uint16_t textColor = state ? BLACK : WHITE;
+    
+    // Draw button
+    display.fillRoundRect(x, y, BTN_WIDTH, BTN_HEIGHT, 5, fillColor);
+    display.drawRoundRect(x, y, BTN_WIDTH, BTN_HEIGHT, 5, borderColor);
+    
+    // Draw label
+    String label = state ? "ON" : "OFF";
+    int textX = x + (BTN_WIDTH - display.getTextWidth(label, 2)) / 2;
+    int textY = y + (BTN_HEIGHT - display.getCharHeight(2)) / 2;
+    display.drawText(textX, textY, label, textColor, fillColor, 2);
+    
+    // Draw number below
+    String numLabel = String(index + 1);
+    int numY = y + BTN_HEIGHT + 10;
+    display.drawCenteredText(numY, numLabel, WHITE, BLACK, 1);
 }
