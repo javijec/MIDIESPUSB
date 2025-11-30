@@ -67,16 +67,8 @@ void setup() {
 void loop() {
   // Actualizar botones
   buttonManager.update();
-  
-  // Actualizar UI (animaciones, mensajes)
-  pedalboardUI.update();
 
-  // Apagado automático de la nota
-  if (noteOnTime != 0 && millis() - noteOnTime >= NOTE_DURATION_MS) {
-    midi.sendNoteOff(activeNoteAddress, velocity);
-    noteOnTime = 0;
-    activeNoteAddress = { 0, Channel_1 };
-  }
+  // No animations - removed pedalboardUI.update() and auto-off
 
   midi.update();
 }
@@ -145,8 +137,10 @@ void handleButtonEvent(uint8_t id, uint8_t eventType) {
   }
   // --- MOMENTARY MODE ---
   else {
-      // Actualizar UI visualmente según el estado físico
+      // Direct ON/OFF - no animations
+      
       if (eventType == ButtonManager::EVENT_PRESSED) {
+          // Visual ON
           pedalboardUI.setButtonState(logicalId, true, config.type);
           
           if (config.enabled) {
@@ -154,8 +148,7 @@ void handleButtonEvent(uint8_t id, uint8_t eventType) {
                   // Note On
                   MIDIAddress noteToSend = {config.value, (Channel)(config.channel)};
                   midi.sendNoteOn(noteToSend, velocity);
-                  activeNoteAddress = noteToSend;
-                  noteOnTime = millis();
+                  // No auto-off - removed tracking
                   
                   String msg = "Note " + String(config.value);
                   pedalboardUI.showStatusMessage(msg);
@@ -178,13 +171,13 @@ void handleButtonEvent(uint8_t id, uint8_t eventType) {
           }
       } 
       else if (eventType == ButtonManager::EVENT_RELEASED) {
+          // Visual OFF
           pedalboardUI.setButtonState(logicalId, false, config.type);
           
           // En momentary mode, enviamos Note Off al soltar (solo para notas)
           if (config.enabled && config.midiType == MIDI_TYPE_NOTE) {
               MIDIAddress noteToSend = {config.value, (Channel)(config.channel)};
               midi.sendNoteOff(noteToSend, velocity);
-              noteOnTime = 0; // Cancelar el auto-off
           }
       }
   }
