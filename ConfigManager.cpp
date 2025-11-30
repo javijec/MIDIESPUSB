@@ -66,12 +66,15 @@ void ConfigManager::loadFromPreferences() {
     Serial.println("Loading preferences...");
     
     // Check if initialized
-    if (!preferences.getBool("init", false)) {
+    bool isInit = preferences.getBool("init", false);
+    preferences.end(); // Close before calling loadDefaults
+    
+    if (!isInit) {
         Serial.println("First boot - loading defaults");
-        loadDefaults();
-        preferences.putBool("init", true);
+        loadDefaults(); // This will set init=true internally
     } else {
         Serial.println("Loading saved configs");
+        preferences.begin("midi-pedal", false);
         // Load configs
         for (int i = 0; i < 4; i++) {
             String key = "btn" + String(i);
@@ -84,12 +87,14 @@ void ConfigManager::loadFromPreferences() {
                 Serial.printf("Btn%d: Using fallback\n", i);
             }
         }
+        preferences.end();
     }
-    preferences.end();
 }
 
 void ConfigManager::loadDefaults() {
     // Default: Buttons 1-4 send Notes C4, D4, E4, F4 on Channel 1
+    preferences.begin("midi-pedal", false);
+    
     for (int i = 0; i < 4; i++) {
         configs[i].type = BUTTON_MOMENTARY;
         configs[i].midiType = MIDI_TYPE_NOTE;
@@ -97,8 +102,17 @@ void ConfigManager::loadDefaults() {
         configs[i].channel = 1;
         configs[i].enabled = 1;
         
-        saveButtonConfig(i, configs[i]);
+        String key = "btn" + String(i);
+        preferences.putBytes(key.c_str(), &configs[i], sizeof(MidiButtonConfig));
+        Serial.printf("Saved Btn%d: type=%d, midiType=%d, value=%d\n", 
+                      i, configs[i].type, configs[i].midiType, configs[i].value);
     }
+    
+    // CRITICAL: Set init flag AFTER saving all buttons
+    preferences.putBool("init", true);
+    Serial.println("Init flag set to TRUE");
+    
+    preferences.end();
 }
 
 void ConfigManager::saveButtonConfig(uint8_t index, MidiButtonConfig config) {
