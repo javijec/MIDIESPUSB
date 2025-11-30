@@ -31,6 +31,11 @@ bool toggleStates[4] = {false, false, false, false};
 // Declaración de funciones
 void handleButtonEvent(uint8_t id, uint8_t eventType);
 
+#line 32 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
+void setup();
+#line 67 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
+void loop();
+#line 32 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void setup() {
   Serial.begin(115200);
   delay(500); // Wait for serial

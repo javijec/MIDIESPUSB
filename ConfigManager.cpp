@@ -21,7 +21,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
 class ConfigCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
-        String value = pCharacteristic->getValue();
+        std::string value = pCharacteristic->getValue();
         
         if (value.length() >= 6) {
             // Format: [CMD, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL]

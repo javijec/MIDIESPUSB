@@ -44,11 +44,28 @@ public:
     void nextBank();
     bool deviceConnected = false;
     
-    void loadFromPreferences();
-    void setupBLE();
-    
     // Default configuration
     void loadDefaults();
+
+    // Get configuration for a specific button (0-3) in the current bank
+    MidiButtonConfig getButtonConfig(uint8_t index);
+    
+    // Save configuration for current bank
+    void saveButtonConfig(uint8_t index, MidiButtonConfig config);
+
+    void updateBLEValue(); // Helper to update char value
+
+private:
+    Preferences preferences;
+    MidiButtonConfig configs[NUM_BANKS][4];
+    uint8_t currentBank = 0;
+    
+    // BLE
+    BLEServer* pServer = nullptr;
+    BLECharacteristic* pConfigCharacteristic = nullptr;
+    
+    void loadFromPreferences();
+    void setupBLE();
 };
 
 extern ConfigManager configManager;
