@@ -10,6 +10,9 @@ public:
     // Initialize and draw the static interface elements
     void begin();
     
+    // Main UI loop for animations and timeouts
+    void update();
+
     // Update the visual state of a button (pressed/released)
     void setButtonState(uint8_t index, bool pressed);
     
@@ -21,13 +24,17 @@ public:
 
 private:
     // Layout constants
-    static const int BUTTON_BOX_WIDTH = 60;
-    static const int BUTTON_BOX_HEIGHT = 40;
-    static const int BUTTON_GAP = 10;
-    static const int BUTTON_Y_POS = 100;
+    static const int PEDAL_RADIUS = 25;
+    static const int PEDAL_GAP = 15;
+    static const int PEDAL_Y_POS = 110;
     
-    // Helper to draw a single button box
-    void drawButtonBox(uint8_t index, bool pressed);
+    // Status message state
+    unsigned long messageStartTime = 0;
+    bool messageVisible = false;
+    static const int MESSAGE_DURATION = 2000;
+
+    // Helper to draw a single virtual pedal
+    void drawPedal(uint8_t index, bool pressed);
 };
 
 extern PedalboardUI pedalboardUI;

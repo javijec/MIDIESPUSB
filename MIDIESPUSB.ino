@@ -47,6 +47,9 @@ void setup() {
 void loop() {
   // Actualizar botones
   buttonManager.update();
+  
+  // Actualizar UI (animaciones, mensajes)
+  pedalboardUI.update();
 
   // Apagado automático de la nota
   if (noteOnTime != 0 && millis() - noteOnTime >= NOTE_DURATION_MS) {
