@@ -29,7 +29,7 @@ void handleButtonEvent(uint8_t id, uint8_t eventType);
 
 #line 28 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void setup();
-#line 46 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
+#line 47 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void loop();
 #line 28 "C:\\Users\\javij\\OneDrive\\01-Programacion\\06-Arduino\\Pedalera MIDI\\MIDIESPUSB\\MIDIESPUSB.ino"
 void setup() {
@@ -45,6 +45,7 @@ void setup() {
   
   // Inicialización de la interfaz MIDI
   midi.begin();
+  Serial.begin(115200);
   
   // Inicialización de botones
   buttonManager.begin(handleButtonEvent);
@@ -66,15 +67,21 @@ void loop() {
 
 // Callback para eventos de botones
 void handleButtonEvent(uint8_t id, uint8_t eventType) {
+  // Ignore the idle state button (Index 0)
+  if (id == 0) return;
+
+  // Map physical buttons (1-4) to logical indices (0-3)
+  uint8_t logicalId = id - 1;
+
   // Actualizar UI visualmente según el estado físico
   if (eventType == ButtonManager::EVENT_PRESSED) {
-      pedalboardUI.setButtonState(id, true);
+      pedalboardUI.setButtonState(logicalId, true);
   } else if (eventType == ButtonManager::EVENT_RELEASED) {
-      pedalboardUI.setButtonState(id, false);
+      pedalboardUI.setButtonState(logicalId, false);
   }
 
   // Lógica de cambio de banco: Long Press en Botón 4 (índice 3)
-  if (id == 3 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
+  if (logicalId == 3 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
       bankManager.nextBank();
       pedalboardUI.updateBankLabel(bankManager.getCurrentBankName());
       pedalboardUI.showStatusMessage("Bank Changed", YELLOW);
@@ -83,7 +90,7 @@ void handleButtonEvent(uint8_t id, uint8_t eventType) {
 
   // Lógica de envío MIDI (solo en Press)
   if (eventType == ButtonManager::EVENT_PRESSED) {
-      MIDIAddress noteToSend = bankManager.getNoteForButton(id);
+      MIDIAddress noteToSend = bankManager.getNoteForButton(logicalId);
       
       // Enviar Note On
       midi.sendNoteOn(noteToSend, velocity);

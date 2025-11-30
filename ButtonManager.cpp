@@ -1,12 +1,14 @@
 #include "ButtonManager.h"
 
 // Initialize static members
-AceButton ButtonManager::b0(nullptr, 0);
-AceButton ButtonManager::b1(nullptr, 1);
-AceButton ButtonManager::b2(nullptr, 2);
-AceButton ButtonManager::b3(nullptr, 3);
+AceButton ButtonManager::dummyButton(nullptr, 0);
+AceButton ButtonManager::b0(nullptr, 1);
+AceButton ButtonManager::b1(nullptr, 2);
+AceButton ButtonManager::b2(nullptr, 3);
+AceButton ButtonManager::b3(nullptr, 4);
 
 AceButton* const ButtonManager::BUTTONS[ButtonManager::NUM_BUTTONS] = {
+    &ButtonManager::dummyButton,
     &ButtonManager::b0, 
     &ButtonManager::b1, 
     &ButtonManager::b2, 
@@ -15,11 +17,12 @@ AceButton* const ButtonManager::BUTTONS[ButtonManager::NUM_BUTTONS] = {
 
 // ADC levels for the ladder buttons
 const uint16_t ButtonManager::LEVELS[ButtonManager::NUM_LEVELS] = {
-  800,  /* 0%, short to ground */
-  1800, /* 32%, 4.7 kohm */
-  2800, /* 50%, 10 kohm */
-  3800, /* 82%, 47 kohm */
-  4095, /* 100%, 10-bit ADC, open circuit */
+  500,  /* Idle state (0) -> Index 0 */
+  1580, /* Button 0 (approx 1340) -> Index 1 (Lowered from 1735) */
+  2370, /* Button 1 (approx 2130) -> Index 2 (Lowered from 2525) */
+  3170, /* Button 2 (approx 2920) -> Index 3 (Lowered from 3320) */
+  3800, /* Button 3 (approx 3720) -> Index 4 (Lowered from 3900) */
+  4095, /* 100%, Open circuit */
 };
 
 LadderButtonConfig ButtonManager::buttonConfig(
@@ -47,6 +50,7 @@ void ButtonManager::begin(ButtonCallback callback) {
     buttonConfig.setFeature(ButtonConfig::kFeatureDoubleClick);
     buttonConfig.setFeature(ButtonConfig::kFeatureLongPress);
     buttonConfig.setFeature(ButtonConfig::kFeatureRepeatPress);
+    buttonConfig.setDebounceDelay(50); // Increased from default 20ms to 50ms
 }
 
 void ButtonManager::update() {

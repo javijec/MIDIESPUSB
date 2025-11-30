@@ -25,14 +25,15 @@ public:
 
 private:
     static const uint8_t BUTTON_PIN = 2;
-    static const uint8_t NUM_BUTTONS = 4;
+    static const uint8_t NUM_BUTTONS = 5;
     static const uint8_t NUM_LEVELS = NUM_BUTTONS + 1;
     
     // AceButton objects need to be persistent
-    static AceButton b0;
-    static AceButton b1;
-    static AceButton b2;
-    static AceButton b3;
+    static AceButton dummyButton; // Index 0: Idle state
+    static AceButton b0;          // Index 1: Physical Button 1
+    static AceButton b1;          // Index 2: Physical Button 2
+    static AceButton b2;          // Index 3: Physical Button 3
+    static AceButton b3;          // Index 4: Physical Button 4
     static AceButton* const BUTTONS[NUM_BUTTONS];
     
     static const uint16_t LEVELS[NUM_LEVELS];
