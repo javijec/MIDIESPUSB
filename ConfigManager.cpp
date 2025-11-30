@@ -25,10 +25,10 @@ class ConfigCallbacks: public BLECharacteristicCallbacks {
         
         if (value.length() >= 6) {
             // Format: [CMD, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL]
-            // CMD: 1 = Write
             uint8_t cmd = value[0];
             uint8_t index = value[1];
             
+            // CMD 1: Write Button Config
             if (cmd == 1 && index < 4) {
                 MidiButtonConfig newConfig;
                 newConfig.type = value[2];
@@ -38,13 +38,40 @@ class ConfigCallbacks: public BLECharacteristicCallbacks {
                 newConfig.enabled = 1;
                 
                 configManager.saveButtonConfig(index, newConfig);
-                Serial.printf("Updated Config for Button %d\n", index);
                 
-                // Mostrar en la pantalla
-                String msg = "Config Saved: Btn " + String(index + 1);
+                // Feedback
+                String msg = "Saved: B" + String(configManager.getCurrentBank() + 1) + " Btn" + String(index + 1);
                 pedalboardUI.showStatusMessage(msg, CYAN);
             }
+            // CMD 2: Set Bank
+            else if (cmd == 2) {
+                uint8_t bank = index; // Reuse index byte for bank number
+                configManager.setCurrentBank(bank);
+                
+                String msg = "Bank " + String(bank + 1);
+                pedalboardUI.showStatusMessage(msg, MAGENTA);
+            }
         }
+    }
+    
+    void onRead(BLECharacteristic *pCharacteristic) {
+        // Return: [CURRENT_BANK, ... 20 bytes of config ...]
+        // Total 21 bytes
+        uint8_t response[21];
+        
+        response[0] = configManager.getCurrentBank();
+        
+        for (int i = 0; i < 4; i++) {
+            MidiButtonConfig cfg = configManager.getButtonConfig(i);
+            int offset = 1 + (i * 5); // Start at byte 1
+            response[offset + 0] = cfg.type;
+            response[offset + 1] = cfg.midiType;
+            response[offset + 2] = cfg.value;
+            response[offset + 3] = cfg.channel;
+            response[offset + 4] = cfg.enabled;
+        }
+        pCharacteristic->setValue(response, 21);
+        Serial.println("Sent bank + configs via BLE");
     }
 };
 
@@ -60,31 +87,55 @@ void ConfigManager::update() {
     // BLE housekeeping if needed
 }
 
+void ConfigManager::setCurrentBank(uint8_t bank) {
+    if (bank >= NUM_BANKS) return;
+    currentBank = bank;
+    Serial.printf("Switched to Bank %d\n", currentBank + 1);
+    
+    // Optional: Save current bank to preferences so it persists?
+    preferences.begin("midi-pedal", false);
+    preferences.putUChar("bank", currentBank);
+    preferences.end();
+}
+
+uint8_t ConfigManager::getCurrentBank() {
+    return currentBank;
+}
+
+void ConfigManager::nextBank() {
+    uint8_t next = (currentBank + 1) % NUM_BANKS;
+    setCurrentBank(next);
+}
+
 void ConfigManager::loadFromPreferences() {
     preferences.begin("midi-pedal", false);
     
     Serial.println("Loading preferences...");
     
+    // Load last used bank
+    currentBank = preferences.getUChar("bank", 0);
+    if (currentBank >= NUM_BANKS) currentBank = 0;
+    
     // Check if initialized
-    bool isInit = preferences.getBool("init", false);
-    preferences.end(); // Close before calling loadDefaults
+    bool isInit = preferences.getBool("init_v2", false); // New init flag for v2
+    preferences.end(); 
     
     if (!isInit) {
-        Serial.println("First boot - loading defaults");
-        loadDefaults(); // This will set init=true internally
+        Serial.println("First boot (v2) - loading defaults");
+        loadDefaults(); 
     } else {
         Serial.println("Loading saved configs");
         preferences.begin("midi-pedal", false);
-        // Load configs
-        for (int i = 0; i < 4; i++) {
-            String key = "btn" + String(i);
-            if (preferences.isKey(key.c_str())) {
-                preferences.getBytes(key.c_str(), &configs[i], sizeof(MidiButtonConfig));
-                Serial.printf("Loaded Btn%d: type=%d\n", i, configs[i].type);
-            } else {
-                // Fallback if key missing
-                configs[i] = {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, (uint8_t)(60 + i), 1, 1};
-                Serial.printf("Btn%d: Using fallback\n", i);
+        // Load configs for all banks
+        for (int b = 0; b < NUM_BANKS; b++) {
+            for (int i = 0; i < 4; i++) {
+                String key = "b" + String(b) + "_btn" + String(i);
+                if (preferences.isKey(key.c_str())) {
+                    preferences.getBytes(key.c_str(), &configs[b][i], sizeof(MidiButtonConfig));
+                } else {
+                    // Fallback
+                    configs[b][i] = {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, (uint8_t)(60 + i), 1, 1};
+                }
             }
         }
         preferences.end();
@@ -92,48 +143,52 @@ void ConfigManager::loadFromPreferences() {
 }
 
 void ConfigManager::loadDefaults() {
-    // Default: Buttons 1-4 send Notes C4, D4, E4, F4 on Channel 1
     preferences.begin("midi-pedal", false);
     
-    for (int i = 0; i < 4; i++) {
-        configs[i].type = BUTTON_MOMENTARY;
-        configs[i].midiType = MIDI_TYPE_NOTE;
-        configs[i].value = 60 + i; // C4, D4...
-        configs[i].channel = 1;
-        configs[i].enabled = 1;
-        
-        String key = "btn" + String(i);
-        preferences.putBytes(key.c_str(), &configs[i], sizeof(MidiButtonConfig));
-        Serial.printf("Saved Btn%d: type=%d, midiType=%d, value=%d\n", 
-                      i, configs[i].type, configs[i].midiType, configs[i].value);
+    for (int b = 0; b < NUM_BANKS; b++) {
+        for (int i = 0; i < 4; i++) {
+            configs[b][i].type = BUTTON_MOMENTARY;
+            configs[b][i].midiType = MIDI_TYPE_NOTE;
+            configs[b][i].channel = 1;
+            configs[b][i].enabled = 1;
+            
+            // Different defaults per bank
+            if (b == 0) configs[b][i].value = 60 + i;      // Bank 1: C4...
+            else if (b == 1) configs[b][i].value = 72 + i; // Bank 2: C5...
+            else if (b == 2) configs[b][i].value = 48 + i; // Bank 3: C3...
+            else configs[b][i].value = 36 + i;             // Bank 4: C2... (Drums?)
+            
+            String key = "b" + String(b) + "_btn" + String(i);
+            preferences.putBytes(key.c_str(), &configs[b][i], sizeof(MidiButtonConfig));
+        }
     }
     
-    // CRITICAL: Set init flag AFTER saving all buttons
-    preferences.putBool("init", true);
-    Serial.println("Init flag set to TRUE");
+    preferences.putBool("init_v2", true);
+    preferences.putUChar("bank", 0);
+    currentBank = 0;
     
+    Serial.println("Defaults loaded (v2)");
     preferences.end();
 }
 
 void ConfigManager::saveButtonConfig(uint8_t index, MidiButtonConfig config) {
     if (index >= 4) return;
     
-    configs[index] = config;
+    configs[currentBank][index] = config;
     
     preferences.begin("midi-pedal", false);
-    String key = "btn" + String(index);
+    String key = "b" + String(currentBank) + "_btn" + String(index);
     preferences.putBytes(key.c_str(), &config, sizeof(MidiButtonConfig));
     preferences.end();
     
-    Serial.printf("Saved Btn%d: type=%d, midiType=%d, value=%d\n", 
-                  index, config.type, config.midiType, config.value);
+    Serial.printf("Saved Bank%d Btn%d\n", currentBank, index);
 }
 
 MidiButtonConfig ConfigManager::getButtonConfig(uint8_t index) {
     if (index >= 4) {
         return {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, 0, 1, 0};
     }
-    return configs[index];
+    return configs[currentBank][index];
 }
 
 void ConfigManager::setupBLE() {
@@ -164,4 +219,26 @@ void ConfigManager::setupBLE() {
     BLEDevice::startAdvertising();
     
     Serial.println("BLE Config Service Started");
+    updateBLEValue(); // Set initial value
+}
+
+void ConfigManager::updateBLEValue() {
+    if (!pConfigCharacteristic) return;
+    
+    uint8_t response[21];
+    response[0] = currentBank;
+    
+    for (int i = 0; i < 4; i++) {
+        // Use internal array directly or getter
+        MidiButtonConfig cfg = configs[currentBank][i];
+        int offset = 1 + (i * 5);
+        response[offset + 0] = cfg.type;
+        response[offset + 1] = cfg.midiType;
+        response[offset + 2] = cfg.value;
+        response[offset + 3] = cfg.channel;
+        response[offset + 4] = cfg.enabled;
+    }
+    
+    pConfigCharacteristic->setValue(response, 21);
+    // Notify if we want to push updates? For now just set value for next read.
 }

@@ -346,7 +346,7 @@ uint8_t LCD_Backlight = 90;
  * y el pin EXAMPLE_PIN_NUM_BK_LIGHT.
  */
 void Backlight_Init(void) {
-  ledcAttach(EXAMPLE_PIN_NUM_BK_LIGHT, Frequency, Resolution);
+  ledcAttach(EXAMPLE_PIN_NUM_BK_LIGHT, PWM_FREQUENCY, Resolution);
   Set_Backlight(LCD_Backlight);  //0~100
 }
 

@@ -29,6 +29,8 @@ struct MidiButtonConfig {
     uint8_t enabled;    // 1 = enabled, 0 = disabled
 };
 
+#define NUM_BANKS 4
+
 class ConfigManager {
 public:
     ConfigManager();
@@ -36,19 +38,10 @@ public:
     void begin();
     void update(); // Call in loop for BLE housekeeping if needed
     
-    // Get configuration for a specific button (0-3)
-    MidiButtonConfig getButtonConfig(uint8_t index);
-    
-    // Save configuration
-    void saveButtonConfig(uint8_t index, MidiButtonConfig config);
-
-private:
-    Preferences preferences;
-    MidiButtonConfig configs[4];
-    
-    // BLE
-    BLEServer* pServer = nullptr;
-    BLECharacteristic* pConfigCharacteristic = nullptr;
+    // Bank Management
+    void setCurrentBank(uint8_t bank);
+    uint8_t getCurrentBank();
+    void nextBank();
     bool deviceConnected = false;
     
     void loadFromPreferences();

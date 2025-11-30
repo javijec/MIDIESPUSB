@@ -8,10 +8,14 @@ public:
     PedalboardUI();
     
     void begin();
+    void redraw(); // Redraw static elements (Header, etc.)
     void update(); // Vacío - sin animaciones
     void setButtonState(uint8_t index, bool state, uint8_t buttonType = 0);
     void updateBankLabel(const String& bankName);
     void showStatusMessage(const String& msg, uint16_t color = GREEN);
+    
+    // Menu Drawing
+    void drawMenu();
 
 private:
     void drawToggleButton(uint8_t index, bool state);

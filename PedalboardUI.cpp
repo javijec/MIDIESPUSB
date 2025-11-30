@@ -1,4 +1,5 @@
 #include "PedalboardUI.h"
+#include "MenuManager.h"
 
 PedalboardUI pedalboardUI;
 
@@ -6,11 +7,7 @@ PedalboardUI::PedalboardUI() {
 }
 
 void PedalboardUI::begin() {
-    display.clearScreen(BLACK);
-    
-    // Header simple
-    display.drawCenteredText(10, "MIDI CONTROLLER", CYAN, BLACK, 2);
-    display.drawHLine(0, 30, display.getWidth(), DARKGRAY);
+    redraw();
     
     // Bank label inicial
     updateBankLabel("Bank 1");
@@ -19,6 +16,14 @@ void PedalboardUI::begin() {
     for (int i = 0; i < 4; i++) {
         drawToggleButton(i, false);
     }
+}
+
+void PedalboardUI::redraw() {
+    display.clearScreen(BLACK);
+    
+    // Header simple
+    display.drawCenteredText(10, "MIDI CONTROLLER", CYAN, BLACK, 2);
+    display.drawHLine(0, 30, display.getWidth(), DARKGRAY);
 }
 
 void PedalboardUI::update() {
@@ -50,7 +55,7 @@ void PedalboardUI::drawToggleButton(uint8_t index, bool state) {
     const int BTN_WIDTH = 50;
     const int BTN_HEIGHT = 50;
     const int BTN_GAP = 10;
-    const int BTN_Y = 100;
+    const int BTN_Y = 60;
     
     // Calcular posición centrada
     int totalWidth = (4 * BTN_WIDTH) + (3 * BTN_GAP);
@@ -76,4 +81,38 @@ void PedalboardUI::drawToggleButton(uint8_t index, bool state) {
     String numLabel = String(index + 1);
     int numY = BTN_Y + BTN_HEIGHT + 10;
     display.drawCenteredText(numY, numLabel, WHITE, BLACK, 1);
+}
+
+void PedalboardUI::drawMenu() {
+    display.clearScreen(BLACK);
+    
+    // Title
+    display.drawText(10, 10, menuManager.getTitle(), CYAN, BLACK, 2);
+    
+    display.drawHLine(0, 35, 240, CYAN);
+    
+    // Items
+    int startY = 50;
+    int lineHeight = 30;
+    
+    for (int i = 0; i < menuManager.getItemCount(); i++) {
+        int y = startY + (i * lineHeight);
+        
+        uint16_t textColor = WHITE;
+        uint16_t bgColor = BLACK;
+        
+        if (i == menuManager.getSelectedIndex()) {
+            textColor = BLACK;
+            bgColor = WHITE;
+            display.fillRect(0, y - 5, 240, lineHeight, WHITE);
+        }
+        
+        display.drawText(10, y, menuManager.getItemLabel(i), textColor, bgColor, 2);
+        
+        // Value (right aligned-ish)
+        String val = menuManager.getItemValueStr(i);
+        if (val.length() > 0) {
+            display.drawText(160, y, val, textColor, bgColor, 2);
+        }
+    }
 }

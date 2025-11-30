@@ -21,7 +21,7 @@
 #define EXAMPLE_PIN_NUM_BK_LIGHT 46
 
 /** PWM para control de retroiluminación. Frequency = Hz, Resolution = bits. */
-#define Frequency 1000  // PWM frequencyconst
+#define PWM_FREQUENCY 1000  // PWM frequencyconst
 #define Resolution 10
 #define Backlight_MAX 100
 

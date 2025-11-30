@@ -2,8 +2,8 @@
 #include "ButtonManager.h"    // Incluye el gestor de botones
 #include "ST7789_Graphics.h"
 #include "PedalboardUI.h"     // Incluye la UI
-#include "BankManager.h"      // Incluye el gestor de bancos
 #include "ConfigManager.h"    // Incluye el gestor de configuración
+#include "MenuManager.h"      // Incluye el gestor de menú
 
 // Variables para la pantalla
 unsigned long lastUpdate = 0;
@@ -41,12 +41,12 @@ void setup() {
   configManager.begin();
   Serial.println("Config loaded");
   
-  // Inicialización de bancos
-  bankManager.begin();
-  
   // Inicialización de la UI
   pedalboardUI.begin();
-  pedalboardUI.updateBankLabel(bankManager.getCurrentBankName());
+  pedalboardUI.updateBankLabel("Bank " + String(configManager.getCurrentBank() + 1));
+  
+  // Inicialización del Menú
+  menuManager.begin();
   
   // Redibujar botones según configuración guardada
   for (int i = 0; i < 4; i++) {
@@ -69,6 +69,7 @@ void loop() {
   buttonManager.update();
 
   // No animations - removed pedalboardUI.update() and auto-off
+  configManager.update(); // BLE housekeeping
 
   midi.update();
 }
@@ -79,16 +80,41 @@ void handleButtonEvent(uint8_t id, uint8_t eventType) {
   if (id == 0) return;
 
   // Map physical buttons (1-4) to logical indices (0-3)
-  uint8_t logicalId = id - 1;
+  // Inverted order: 1->3, 2->2, 3->1, 4->0
+  uint8_t logicalId = 3 - (id - 1);
+
+  // *** MENU HANDLING ***
+  if (menuManager.isActive()) {
+      menuManager.handleButton(logicalId, eventType);
+      return; // Don't process MIDI or other logic if menu is active
+  }
+  
+  // Open Menu: Long Press Button 1
+  if (logicalId == 0 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
+      menuManager.open();
+      return;
+  }
 
   // Obtener configuración del botón
   MidiButtonConfig config = configManager.getButtonConfig(logicalId);
 
   // Lógica de cambio de banco: Long Press en Botón 4 (índice 3)
   if (logicalId == 3 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
-      bankManager.nextBank();
-      pedalboardUI.updateBankLabel(bankManager.getCurrentBankName());
-      pedalboardUI.showStatusMessage("Bank Changed", YELLOW);
+      configManager.nextBank();
+      
+      // Feedback visual
+      String bankName = "Bank " + String(configManager.getCurrentBank() + 1);
+      pedalboardUI.updateBankLabel(bankName);
+      pedalboardUI.showStatusMessage(bankName, MAGENTA);
+      
+      // Redibujar todos los botones con la nueva configuración del banco
+      for (int i = 0; i < 4; i++) {
+          MidiButtonConfig cfg = configManager.getButtonConfig(i);
+          // Reset toggle states on bank switch? Maybe safer.
+          toggleStates[i] = false; 
+          pedalboardUI.setButtonState(i, false, cfg.type);
+      }
+      
       return; // No enviar nota si se usó para cambiar de banco
   }
 
