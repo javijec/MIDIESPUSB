@@ -204,8 +204,8 @@ void ConfigManager::setupBLE() {
 
     pConfigCharacteristic->setCallbacks(new ConfigCallbacks());
     
-    // Set initial value (maybe just a handshake or version)
-    pConfigCharacteristic->setValue("READY");
+    // Set initial value immediately
+    updateBLEValue();
 
     pService->start();
     
@@ -217,7 +217,6 @@ void ConfigManager::setupBLE() {
     BLEDevice::startAdvertising();
     
     Serial.println("BLE Config Service Started");
-    updateBLEValue(); // Set initial value
 }
 
 void ConfigManager::updateBLEValue() {
