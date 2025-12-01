@@ -57,23 +57,8 @@ class ConfigCallbacks: public BLECharacteristicCallbacks {
     }
     
     void onRead(BLECharacteristic *pCharacteristic) {
-        // Return: [CURRENT_BANK, ... 20 bytes of config ...]
-        // Total 21 bytes
-        uint8_t response[21];
-        
-        response[0] = configManager.getCurrentBank();
-        
-        for (int i = 0; i < 4; i++) {
-            MidiButtonConfig cfg = configManager.getButtonConfig(i);
-            int offset = 1 + (i * 5); // Start at byte 1
-            response[offset + 0] = cfg.type;
-            response[offset + 1] = cfg.midiType;
-            response[offset + 2] = cfg.value;
-            response[offset + 3] = cfg.channel;
-            response[offset + 4] = cfg.enabled;
-        }
-        pCharacteristic->setValue(response, 21);
-        Serial.println("Sent bank + configs via BLE");
+        // Value is already set by updateBLEValue()
+        Serial.println("Read request received");
     }
 };
 
@@ -98,6 +83,8 @@ void ConfigManager::setCurrentBank(uint8_t bank) {
     preferences.begin("midi-pedal", false);
     preferences.putUChar("bank", currentBank);
     preferences.end();
+    
+    updateBLEValue();
 }
 
 uint8_t ConfigManager::getCurrentBank() {
@@ -189,6 +176,8 @@ void ConfigManager::saveButtonConfig(uint8_t index, MidiButtonConfig config) {
     preferences.end();
     
     Serial.printf("Saved Bank%d Btn%d\n", currentBank, index);
+    
+    updateBLEValue();
 }
 
 MidiButtonConfig ConfigManager::getButtonConfig(uint8_t index) {

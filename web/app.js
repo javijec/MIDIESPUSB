@@ -7,7 +7,7 @@ let currentBank = 0;
 let selectedUiIndex = 0; // 0-3 (Left to Right on screen)
 // LOGICAL MAPPING: UI Index (0-3) -> Firmware Index (3-0)
 // Because firmware inverts: Phys 1 -> Log 3. We want UI 1 -> Phys 1 -> Log 3.
-const LOGICAL_MAP = [3, 2, 1, 0];
+const LOGICAL_MAP = [0, 1, 2, 3];
 // Cache of current configs (4 buttons)
 let currentConfigs = [
   { type: 0, midiType: 0, value: 60, channel: 1, enabled: 1 },
