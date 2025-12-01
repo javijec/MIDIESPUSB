@@ -26,6 +26,7 @@ struct MidiButtonConfig {
     uint8_t midiType;   // MidiMessageType
     uint8_t value;      // Note number or CC number
     uint8_t channel;    // MIDI Channel (1-16)
+    uint8_t velocity;   // Note Velocity (0-127)
     uint8_t enabled;    // 1 = enabled, 0 = disabled
 };
 

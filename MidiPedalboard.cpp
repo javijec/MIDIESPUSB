@@ -6,6 +6,7 @@ MidiPedalboard::MidiPedalboard() {
     instance = this;
     for (int i = 0; i < 4; i++) {
         toggleStates[i] = false;
+        activeNotes[i] = {0, 1, 0, false};
     }
 }
 
@@ -80,6 +81,8 @@ void MidiPedalboard::handleButtonEvent(uint8_t id, uint8_t eventType) {
     // Bank Switching Logic
     // Button 1 (Index 0) Long Press: Previous Bank
     if (logicalId == 0 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
+        // Turn off any active toggles from previous bank before switching?
+        // For now, just switch.
         configManager.prevBank();
         
         // Visual Feedback
@@ -129,12 +132,12 @@ void MidiPedalboard::handleButtonEvent(uint8_t id, uint8_t eventType) {
                     MIDIAddress noteToSend = {config.value, (Channel)(config.channel)};
                     if (toggleStates[logicalId]) {
                         // Encender
-                        midi.sendNoteOn(noteToSend, velocity);
+                        midi.sendNoteOn(noteToSend, config.velocity);
                         String msg = "Note ON " + String(config.value);
                         pedalboardUI.showStatusMessage(msg, GREEN);
                     } else {
                         // Apagar
-                        midi.sendNoteOff(noteToSend, velocity);
+                        midi.sendNoteOff(noteToSend, config.velocity);
                         String msg = "Note OFF " + String(config.value);
                         pedalboardUI.showStatusMessage(msg, RED);
                     }
@@ -159,18 +162,21 @@ void MidiPedalboard::handleButtonEvent(uint8_t id, uint8_t eventType) {
     }
     // --- MOMENTARY MODE ---
     else {
-        // Direct ON/OFF - no animations
-        
         if (eventType == ButtonManager::EVENT_PRESSED) {
             // Visual ON
             pedalboardUI.setButtonState(logicalId, true, config.type);
             
             if (config.enabled) {
+                // Track this note/CC
+                activeNotes[logicalId].value = config.value;
+                activeNotes[logicalId].channel = config.channel;
+                activeNotes[logicalId].midiType = config.midiType;
+                activeNotes[logicalId].active = true;
+
                 if (config.midiType == MIDI_TYPE_NOTE) {
                     // Note On
                     MIDIAddress noteToSend = {config.value, (Channel)(config.channel)};
-                    midi.sendNoteOn(noteToSend, velocity);
-                    // No auto-off - removed tracking
+                    midi.sendNoteOn(noteToSend, config.velocity);
                     
                     String msg = "Note " + String(config.value);
                     pedalboardUI.showStatusMessage(msg);
@@ -196,10 +202,23 @@ void MidiPedalboard::handleButtonEvent(uint8_t id, uint8_t eventType) {
             // Visual OFF
             pedalboardUI.setButtonState(logicalId, false, config.type);
             
-            // En momentary mode, enviamos Note Off al soltar (solo para notas)
-            if (config.enabled && config.midiType == MIDI_TYPE_NOTE) {
-                MIDIAddress noteToSend = {config.value, (Channel)(config.channel)};
-                midi.sendNoteOff(noteToSend, velocity);
+            // Check if we have an active note for this button
+            if (activeNotes[logicalId].active) {
+                uint8_t val = activeNotes[logicalId].value;
+                uint8_t ch = activeNotes[logicalId].channel;
+                uint8_t type = activeNotes[logicalId].midiType;
+                
+                if (type == MIDI_TYPE_NOTE) {
+                    MIDIAddress noteToSend = {val, (Channel)(ch)};
+                    // Use standard velocity for Note Off or stored? 
+                    // Standard practice is 0 or same velocity. Let's use 0x40 or 0.
+                    // Actually, Note Off velocity is often ignored or used for release velocity.
+                    // Let's use a default 64 for release to be safe, or we could track velocity too.
+                    // For simplicity, let's use 64 (0x40) for Note Off.
+                    midi.sendNoteOff(noteToSend, 0x40);
+                }
+                
+                activeNotes[logicalId].active = false;
             }
         }
     }

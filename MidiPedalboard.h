@@ -28,6 +28,14 @@ private:
     // State variables
     static const uint8_t velocity = 0x40;
     bool toggleStates[4];
+
+    struct ActiveNote {
+        uint8_t value;
+        uint8_t channel;
+        uint8_t midiType; // To know if we need to send NoteOff or CC
+        bool active;
+    };
+    ActiveNote activeNotes[4];
     
     // Singleton instance pointer for the static callback
     static MidiPedalboard* instance;

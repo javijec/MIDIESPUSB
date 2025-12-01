@@ -25,8 +25,8 @@ class ConfigCallbacks: public BLECharacteristicCallbacks {
         uint8_t* data = pCharacteristic->getData();
         size_t len = pCharacteristic->getLength();
         
-        if (len >= 6) {
-            // Format: [CMD, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL]
+        if (len >= 7) {
+            // Format: [CMD, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL, VELOCITY]
             uint8_t cmd = data[0];
             uint8_t index = data[1];
             
@@ -37,6 +37,7 @@ class ConfigCallbacks: public BLECharacteristicCallbacks {
                 newConfig.midiType = data[3];
                 newConfig.value = data[4];
                 newConfig.channel = data[5];
+                newConfig.velocity = data[6];
                 newConfig.enabled = 1;
                 
                 configManager.saveButtonConfig(index, newConfig);
@@ -111,11 +112,11 @@ void ConfigManager::loadFromPreferences() {
     if (currentBank >= NUM_BANKS) currentBank = 0;
     
     // Check if initialized
-    bool isInit = preferences.getBool("init_v2", false); // New init flag for v2
+    bool isInit = preferences.getBool("init_v3", false); // New init flag for v3 (velocity)
     preferences.end(); 
     
     if (!isInit) {
-        Serial.println("First boot (v2) - loading defaults");
+        Serial.println("First boot (v3) - loading defaults");
         loadDefaults(); 
     } else {
         Serial.println("Loading saved configs");
@@ -128,7 +129,7 @@ void ConfigManager::loadFromPreferences() {
                     preferences.getBytes(key.c_str(), &configs[b][i], sizeof(MidiButtonConfig));
                 } else {
                     // Fallback
-                    configs[b][i] = {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, (uint8_t)(60 + i), 1, 1};
+                    configs[b][i] = {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, (uint8_t)(60 + i), 1, 127, 1};
                 }
             }
         }
@@ -144,6 +145,7 @@ void ConfigManager::loadDefaults() {
             configs[b][i].type = BUTTON_MOMENTARY;
             configs[b][i].midiType = MIDI_TYPE_NOTE;
             configs[b][i].channel = 1;
+            configs[b][i].velocity = 127; // Default max velocity
             configs[b][i].enabled = 1;
             
             // Different defaults per bank
@@ -157,11 +159,11 @@ void ConfigManager::loadDefaults() {
         }
     }
     
-    preferences.putBool("init_v2", true);
+    preferences.putBool("init_v3", true);
     preferences.putUChar("bank", 0);
     currentBank = 0;
     
-    Serial.println("Defaults loaded (v2)");
+    Serial.println("Defaults loaded (v3)");
     preferences.end();
 }
 
@@ -182,7 +184,7 @@ void ConfigManager::saveButtonConfig(uint8_t index, MidiButtonConfig config) {
 
 MidiButtonConfig ConfigManager::getButtonConfig(uint8_t index) {
     if (index >= 4) {
-        return {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, 0, 1, 0};
+        return {BUTTON_MOMENTARY, MIDI_TYPE_NOTE, 0, 1, 127, 0};
     }
     return configs[currentBank][index];
 }
@@ -221,20 +223,22 @@ void ConfigManager::setupBLE() {
 void ConfigManager::updateBLEValue() {
     if (!pConfigCharacteristic) return;
     
-    uint8_t response[21];
+    // 1 byte Bank + 4 buttons * 6 bytes = 25 bytes
+    uint8_t response[25];
     response[0] = currentBank;
     
     for (int i = 0; i < 4; i++) {
         // Use internal array directly or getter
         MidiButtonConfig cfg = configs[currentBank][i];
-        int offset = 1 + (i * 5);
+        int offset = 1 + (i * 6);
         response[offset + 0] = cfg.type;
         response[offset + 1] = cfg.midiType;
         response[offset + 2] = cfg.value;
         response[offset + 3] = cfg.channel;
-        response[offset + 4] = cfg.enabled;
+        response[offset + 4] = cfg.velocity;
+        response[offset + 5] = cfg.enabled;
     }
     
-    pConfigCharacteristic->setValue(response, 21);
+    pConfigCharacteristic->setValue(response, 25);
     // Notify if we want to push updates? For now just set value for next read.
 }
