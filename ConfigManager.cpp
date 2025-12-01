@@ -72,7 +72,10 @@ void ConfigManager::begin() {
 }
 
 void ConfigManager::update() {
-    // BLE housekeeping if needed
+    if (needsUpdate) {
+        updateBLEValue();
+        needsUpdate = false;
+    }
 }
 
 void ConfigManager::setCurrentBank(uint8_t bank) {
@@ -85,7 +88,7 @@ void ConfigManager::setCurrentBank(uint8_t bank) {
     preferences.putUChar("bank", currentBank);
     preferences.end();
     
-    updateBLEValue();
+    needsUpdate = true; // Defer update to main loop
 }
 
 uint8_t ConfigManager::getCurrentBank() {
