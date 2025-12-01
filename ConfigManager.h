@@ -56,6 +56,7 @@ public:
     void saveButtonConfig(uint8_t index, MidiButtonConfig config);
 
     void updateBLEValue(); // Helper to update char value
+    bool needsUpdate = false;
 
 private:
     Preferences preferences;

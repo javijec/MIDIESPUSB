@@ -179,7 +179,7 @@ void ConfigManager::saveButtonConfig(uint8_t index, MidiButtonConfig config) {
     
     Serial.printf("Saved Bank%d Btn%d\n", currentBank, index);
     
-    updateBLEValue();
+    needsUpdate = true; // Defer update
 }
 
 MidiButtonConfig ConfigManager::getButtonConfig(uint8_t index) {
