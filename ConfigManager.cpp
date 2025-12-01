@@ -21,20 +21,22 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
 class ConfigCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
-        std::string value = pCharacteristic->getValue();
+        // Use raw data access to avoid String truncation with null bytes
+        uint8_t* data = pCharacteristic->getData();
+        size_t len = pCharacteristic->getLength();
         
-        if (value.length() >= 6) {
+        if (len >= 6) {
             // Format: [CMD, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL]
-            uint8_t cmd = value[0];
-            uint8_t index = value[1];
+            uint8_t cmd = data[0];
+            uint8_t index = data[1];
             
             // CMD 1: Write Button Config
             if (cmd == 1 && index < 4) {
                 MidiButtonConfig newConfig;
-                newConfig.type = value[2];
-                newConfig.midiType = value[3];
-                newConfig.value = value[4];
-                newConfig.channel = value[5];
+                newConfig.type = data[2];
+                newConfig.midiType = data[3];
+                newConfig.value = data[4];
+                newConfig.channel = data[5];
                 newConfig.enabled = 1;
                 
                 configManager.saveButtonConfig(index, newConfig);
