@@ -71,19 +71,41 @@ function onDisconnected() {
   mainInterface.classList.remove("visible");
 }
 // --- Data Handling ---
-async function loadConfig() {
+async function loadConfig(retries = 3) {
   try {
     log("Reading configuration...");
     const value = await characteristic.readValue();
     const data = new Uint8Array(value.buffer);
     log(`Received ${data.length} bytes`);
+    log(
+      `Data: ${Array.from(data)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(" ")}`
+    );
+
+    // Check for "READY" string (old firmware artifact or race condition)
+    if (data.length === 6 || data.length === 5) {
+      const str = new TextDecoder().decode(data).replace(/\0/g, "");
+      if (str === "READY") {
+        log("Received 'READY'. Waiting for config...");
+        if (retries > 0) {
+          setTimeout(() => loadConfig(retries - 1), 500);
+          return;
+        }
+      }
+    }
 
     // Support both V2 (21 bytes) and V3 (25 bytes)
     const isV3 = data.length >= 25;
     const isV2 = data.length >= 21;
 
     if (!isV2) {
-      log("Error: Invalid data length (expected >= 21)");
+      log(`Error: Invalid data length: ${data.length} bytes (expected >= 21)`);
+      if (retries > 0) {
+        log("Retrying...");
+        setTimeout(() => loadConfig(retries - 1), 1000);
+        return;
+      }
       return;
     }
 
@@ -134,6 +156,7 @@ async function loadConfig() {
     log("Read failed: " + error);
   }
 }
+
 async function saveCurrentConfig() {
   try {
     const uiIdx = selectedUiIndex;
