@@ -28,8 +28,11 @@ void MidiPedalboard::begin() {
     configManager.begin();
     Serial.println("Config loaded");
     
+    // Version definition
+    const char* FIRMWARE_VERSION = "v1.2";
+
     // Inicialización de la UI
-    pedalboardUI.begin();
+    pedalboardUI.begin(FIRMWARE_VERSION);
     pedalboardUI.updateBankLabel("Bank " + String(configManager.getCurrentBank() + 1));
     
     // Inicialización del Menú

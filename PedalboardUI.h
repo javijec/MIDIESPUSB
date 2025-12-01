@@ -7,7 +7,7 @@ class PedalboardUI {
 public:
     PedalboardUI();
     
-    void begin();
+    void begin(const char* version);
     void redraw(); // Redraw static elements (Header, etc.)
     void update(); // Vacío - sin animaciones
     void setButtonState(uint8_t index, bool state, uint8_t buttonType = 0);

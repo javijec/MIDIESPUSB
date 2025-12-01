@@ -6,9 +6,12 @@ PedalboardUI pedalboardUI;
 PedalboardUI::PedalboardUI() {
 }
 
-void PedalboardUI::begin() {
+void PedalboardUI::begin(const char* version) {
     redraw();
     
+    // Draw Version (Top Right)
+    display.drawText(180, 10, version, YELLOW, BLACK, 2);
+
     // Bank label inicial
     updateBankLabel("Bank 1");
     
