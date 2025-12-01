@@ -37,7 +37,7 @@ public:
     ConfigManager();
     
     void begin();
-    void update(); // Call in loop for BLE housekeeping if needed
+    void update();
     
     // Bank Management
     void setCurrentBank(uint8_t bank);
@@ -55,17 +55,19 @@ public:
     // Save configuration for current bank
     void saveButtonConfig(uint8_t index, MidiButtonConfig config);
 
-    void updateBLEValue(); // Helper to update char value
-    bool needsUpdate = false;
+    // BLE - called from callbacks
+    void handleBLECommand(uint8_t* data, size_t len);
+    void sendCurrentConfig();
 
 private:
     Preferences preferences;
     MidiButtonConfig configs[NUM_BANKS][4];
     uint8_t currentBank = 0;
     
-    // BLE
+    // BLE - Two characteristics: one for commands, one for data
     BLEServer* pServer = nullptr;
-    BLECharacteristic* pConfigCharacteristic = nullptr;
+    BLECharacteristic* pCommandCharacteristic = nullptr;
+    BLECharacteristic* pDataCharacteristic = nullptr;
     
     void loadFromPreferences();
     void setupBLE();

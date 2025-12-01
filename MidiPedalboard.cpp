@@ -29,7 +29,7 @@ void MidiPedalboard::begin() {
     Serial.println("Config loaded");
     
     // Version definition
-    const char* FIRMWARE_VERSION = "v1.2";
+    const char* FIRMWARE_VERSION = "v1.3";
 
     // Inicialización de la UI
     pedalboardUI.begin(FIRMWARE_VERSION);
