@@ -42,6 +42,7 @@ public:
     void setCurrentBank(uint8_t bank);
     uint8_t getCurrentBank();
     void nextBank();
+    void prevBank();
     bool deviceConnected = false;
     
     // Default configuration

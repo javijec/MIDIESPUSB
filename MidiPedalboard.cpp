@@ -74,33 +74,44 @@ void MidiPedalboard::handleButtonEvent(uint8_t id, uint8_t eventType) {
         return; // Don't process MIDI or other logic if menu is active
     }
     
-    // Open Menu: Long Press Button 1
-    if (logicalId == 0 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
-        menuManager.open();
-        return;
-    }
-
     // Obtener configuración del botón
     MidiButtonConfig config = configManager.getButtonConfig(logicalId);
 
-    // Lógica de cambio de banco: Long Press en Botón 4 (índice 3)
-    if (logicalId == 3 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
-        configManager.nextBank();
+    // Bank Switching Logic
+    // Button 1 (Index 0) Long Press: Previous Bank
+    if (logicalId == 0 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
+        configManager.prevBank();
         
-        // Feedback visual
+        // Visual Feedback
         String bankName = "Bank " + String(configManager.getCurrentBank() + 1);
         pedalboardUI.updateBankLabel(bankName);
         pedalboardUI.showStatusMessage(bankName, MAGENTA);
         
-        // Redibujar todos los botones con la nueva configuración del banco
+        // Redraw buttons
         for (int i = 0; i < 4; i++) {
             MidiButtonConfig cfg = configManager.getButtonConfig(i);
-            // Reset toggle states on bank switch? Maybe safer.
             toggleStates[i] = false; 
             pedalboardUI.setButtonState(i, false, cfg.type);
         }
+        return;
+    }
+
+    // Button 4 (Index 3) Long Press: Next Bank
+    if (logicalId == 3 && eventType == ButtonManager::EVENT_LONG_PRESSED) {
+        configManager.nextBank();
         
-        return; // No enviar nota si se usó para cambiar de banco
+        // Visual Feedback
+        String bankName = "Bank " + String(configManager.getCurrentBank() + 1);
+        pedalboardUI.updateBankLabel(bankName);
+        pedalboardUI.showStatusMessage(bankName, MAGENTA);
+        
+        // Redraw buttons
+        for (int i = 0; i < 4; i++) {
+            MidiButtonConfig cfg = configManager.getButtonConfig(i);
+            toggleStates[i] = false; 
+            pedalboardUI.setButtonState(i, false, cfg.type);
+        }
+        return; 
     }
 
     // --- TOGGLE MODE ---

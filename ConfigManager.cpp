@@ -109,6 +109,11 @@ void ConfigManager::nextBank() {
     setCurrentBank(next);
 }
 
+void ConfigManager::prevBank() {
+    uint8_t prev = (currentBank - 1 + NUM_BANKS) % NUM_BANKS;
+    setCurrentBank(prev);
+}
+
 void ConfigManager::loadFromPreferences() {
     preferences.begin("midi-pedal", false);
     
