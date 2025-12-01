@@ -77,28 +77,54 @@ async function loadConfig() {
     const value = await characteristic.readValue();
     const data = new Uint8Array(value.buffer);
     log(`Received ${data.length} bytes`);
-    if (data.length < 21) {
-      log("Error: Invalid data length");
+
+    // Support both V2 (21 bytes) and V3 (25 bytes)
+    const isV3 = data.length >= 25;
+    const isV2 = data.length >= 21;
+
+    if (!isV2) {
+      log("Error: Invalid data length (expected >= 21)");
       return;
     }
+
     // Byte 0 is Current Bank
     currentBank = data[0];
     updateBankUI(currentBank);
     log(`Current Bank: ${currentBank + 1}`);
+
     // Parse Configs
-    // Data format: [Bank, Btn0_Type, Btn0_Midi, Btn0_Val, Btn0_Ch, Btn0_En, Btn1...]
-    // But remember, Firmware sends logical indices 0, 1, 2, 3.
-    // We need to map these to our UI indices.
-    // UI 0 maps to Firmware Index 3.
     for (let uiIdx = 0; uiIdx < 4; uiIdx++) {
       const fwIdx = LOGICAL_MAP[uiIdx];
-      const offset = 1 + fwIdx * 5;
+
+      let type, midiType, value, channel, velocity, enabled;
+
+      if (isV3) {
+        // V3: 6 bytes per button
+        const offset = 1 + fwIdx * 6;
+        type = data[offset + 0];
+        midiType = data[offset + 1];
+        value = data[offset + 2];
+        channel = data[offset + 3];
+        velocity = data[offset + 4];
+        enabled = data[offset + 5];
+      } else {
+        // V2: 5 bytes per button
+        const offset = 1 + fwIdx * 5;
+        type = data[offset + 0];
+        midiType = data[offset + 1];
+        value = data[offset + 2];
+        channel = data[offset + 3];
+        enabled = data[offset + 4];
+        velocity = 127; // Default for V2
+      }
+
       currentConfigs[uiIdx] = {
-        type: data[offset + 0],
-        midiType: data[offset + 1],
-        value: data[offset + 2],
-        channel: data[offset + 3],
-        enabled: data[offset + 4],
+        type,
+        midiType,
+        value,
+        channel,
+        velocity,
+        enabled,
       };
       updatePedalInfo(uiIdx);
     }
@@ -118,8 +144,9 @@ async function saveCurrentConfig() {
     cfg.midiType = parseInt(document.getElementById("midiType").value);
     cfg.value = parseInt(document.getElementById("midiValue").value);
     cfg.channel = parseInt(document.getElementById("midiChannel").value);
+    cfg.velocity = parseInt(document.getElementById("midiVelocity").value);
     // Prepare Command
-    // [CMD=1, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL]
+    // [CMD=1, INDEX, TYPE, MIDITYPE, VALUE, CHANNEL, VELOCITY]
     const cmd = new Uint8Array([
       1,
       fwIdx,
@@ -127,6 +154,7 @@ async function saveCurrentConfig() {
       cfg.midiType,
       cfg.value,
       cfg.channel,
+      cfg.velocity,
     ]);
     log(`Saving Button ${uiIdx + 1} (FW Index ${fwIdx})...`);
     await characteristic.writeValue(cmd);
@@ -170,6 +198,7 @@ function loadForm(uiIdx) {
   document.getElementById("midiType").value = cfg.midiType;
   document.getElementById("midiValue").value = cfg.value;
   document.getElementById("midiChannel").value = cfg.channel;
+  document.getElementById("midiVelocity").value = cfg.velocity || 127;
 }
 // --- Event Listeners ---
 window.selectPedal = (uiIdx) => {
